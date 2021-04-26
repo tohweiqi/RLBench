@@ -17,7 +17,9 @@ class Agent(object):
 
 
 obs_config = ObservationConfig()
-obs_config.set_all(True)
+obs_config.set_all_low_dim(True)        # set low dim obs (joint pos, grip force etc.)
+obs_config.set_all_high_dim(False)      # turn off all cameras (high dim obs)
+obs_config.wrist_camera.set_all(True)   # select and set camera 
 
 action_mode = ActionMode(ArmActionMode.ABS_JOINT_VELOCITY)
 env = Environment(
@@ -28,8 +30,8 @@ task = env.get_task(ReachTarget)
 
 agent = Agent(env.action_size)
 
-training_steps = 120
-episode_length = 40
+training_steps = 1200
+episode_length = 100
 obs = None
 for i in range(training_steps):
     if i % episode_length == 0:
@@ -37,6 +39,8 @@ for i in range(training_steps):
         descriptions, obs = task.reset()
         print(descriptions)
     action = agent.act(obs)
+    if i%10 == 0:
+        action[-1] = 0
     print(action)
     obs, reward, terminate = task.step(action)
 

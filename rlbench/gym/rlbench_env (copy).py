@@ -136,17 +136,25 @@ class RLBenchEnv(gym.Env):
                     low=0, high=1, shape=obs.front_rgb.shape),
                 })
         elif observation_mode == 'vision_wrist_only':
-            self.observation_space = spaces.Box(
-                    low=0, high=1, shape=obs.wrist_rgb.shape)
+            self.observation_space = spaces.Dict({
+                "wrist_rgb": spaces.Box(
+                    low=0, high=1, shape=obs.wrist_rgb.shape),
+                })
         elif observation_mode == 'vision_front_only':
-            self.observation_space = spaces.Box(
-                    low=0, high=1, shape=obs.front_rgb.shape)
+            self.observation_space = spaces.Dict({
+                "front_rgb": spaces.Box(
+                    low=0, high=1, shape=obs.front_rgb.shape),
+                })
         elif observation_mode == 'vision_left_shoulder_only':
-            self.observation_space = spaces.Box(
-                    low=0, high=1, shape=obs.left_shoulder_rgb.shape)
+            self.observation_space = spaces.Dict({
+                "left_shoulder_rgb": spaces.Box(
+                    low=0, high=1, shape=obs.left_shoulder_rgb.shape),
+                })
         elif observation_mode == 'vision_right_shoulder_only':
-            self.observation_space = spaces.Box(
-                    low=0, high=1, shape=obs.right_shoulder_rgb.shape)
+            self.observation_space = spaces.Dict({
+                "right_shoulder_rgb": spaces.Box(
+                    low=0, high=1, shape=obs.right_shoulder_rgb.shape),
+                })
 
 
         if render_mode is not None:
@@ -198,13 +206,21 @@ class RLBenchEnv(gym.Env):
                 "front_rgb": obs.front_rgb,
             }
         elif self._observation_mode == 'vision_wrist_only':
-            return obs.wrist_rgb
+            return {
+                "wrist_rgb": obs.wrist_rgb,
+            }
         elif self._observation_mode == 'vision_front_only':
-            return obs.front_rgb
+            return {
+                "front_rgb": obs.front_rgb,
+            }
         elif self._observation_mode == 'vision_left_shoulder_only':
-            return obs.left_shoulder_rgb
+            return {
+                "left_shoulder_rgb": obs.left_shoulder_rgb,
+            }
         elif self._observation_mode == 'vision_right_shoulder_only':
-            return obs.right_shoulder_rgb
+            return {
+                "right_shoulder_rgb": obs.right_shoulder_rgb,
+            }
 
     def render(self, mode='human') -> Union[None, np.ndarray]:
         if mode != self._render_mode:
@@ -225,10 +241,7 @@ class RLBenchEnv(gym.Env):
 
     def step(self, action) -> Tuple[Dict[str, np.ndarray], float, bool, dict]:
         obs, reward, terminate = self.task.step(action)
-        success = False
-        if reward > 0:
-            success = True
-        return self._extract_obs(obs), reward, terminate, {'is_success': success}
+        return self._extract_obs(obs), reward, terminate, {}
 
     def close(self) -> None:
         self.env.shutdown()

@@ -51,12 +51,14 @@ class GripperActionMode(Enum):
 
     # The open amount (0 >= x <= 1) of the gripper. 0 is close, 1 is open.
     OPEN_AMOUNT = 0
+    
+    DISCRETE_OPEN_CLOSE = 1
 
 
 class ActionMode(object):
 
     def __init__(self,
                  arm: ArmActionMode = ArmActionMode.ABS_JOINT_VELOCITY,
-                 gripper: GripperActionMode = GripperActionMode.OPEN_AMOUNT):
+                 gripper: GripperActionMode = GripperActionMode.DISCRETE_OPEN_CLOSE):
         self.arm = arm
         self.gripper = gripper

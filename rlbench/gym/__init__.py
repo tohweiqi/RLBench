@@ -26,3 +26,75 @@ for task_file in TASKS:
             'observation_mode': 'vision'
         }
     )
+    register(
+        id='%s-vision_wrist-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_wrist'
+        }
+    )
+    register(
+        id='%s-vision_front-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_front'
+        }
+    )
+    register(
+        id='%s-vision_left_shoulder-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_left_shoulder'
+        }
+    )
+    register(
+        id='%s-vision_right_shoulder-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_right_shoulder'
+        }
+    )
+    register(
+        id='%s-vision_only-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_only'
+        }
+    )
+    register(
+        id='%s-vision_wrist_only-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_wrist_only'
+        }
+    )
+    register(
+        id='%s-vision_front_only-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_front_only'
+        }
+    )
+    register(
+        id='%s-vision_left_shoulder_only-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_left_shoulder_only'
+        }
+    )
+    register(
+        id='%s-vision_right_shoulder_only-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_right_shoulder_only'
+        }
+    )

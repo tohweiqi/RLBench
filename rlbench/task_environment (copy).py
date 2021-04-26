@@ -8,7 +8,7 @@ from pyrep.errors import IKError
 from pyrep.objects import Dummy
 
 from rlbench import utils
-from rlbench.action_modes import ArmActionMode, ActionMode, GripperActionMode
+from rlbench.action_modes import ArmActionMode, ActionMode
 from rlbench.backend.exceptions import BoundaryError, WaypointError
 from rlbench.backend.observation import Observation
 from rlbench.backend.robot import Robot
@@ -22,7 +22,6 @@ _DT = 0.05
 _MAX_RESET_ATTEMPTS = 40
 _MAX_DEMO_ATTEMPTS = 10
 
-speed_grip = 0.2
 
 class InvalidActionError(Exception):
     pass
@@ -38,8 +37,7 @@ class TaskEnvironment(object):
                  action_mode: ActionMode, dataset_root: str,
                  obs_config: ObservationConfig,
                  static_positions: bool = False,
-                 attach_grasped_objects: bool = True,
-                 max_episode_length: int = 200):
+                 attach_grasped_objects: bool = True):
         self._pyrep = pyrep
         self._robot = robot
         self._scene = scene
@@ -57,9 +55,6 @@ class TaskEnvironment(object):
         self._scene.load(self._task)
         self._pyrep.start()
         self._target_workspace_check = Dummy.create()
-        
-        self._max_episode_length = max_episode_length
-        self._episode_length = 0 
 
     def get_name(self) -> str:
         return self._task.get_name()
@@ -184,22 +179,14 @@ class TaskEnvironment(object):
         if 0.0 > ee_action > 1.0:
             raise ValueError('Gripper action expected to be within 0 and 1.')
 
-        if self._action_mode.gripper == GripperActionMode.DISCRETE_OPEN_CLOSE:
-            # Discretize the gripper action
-            current_ee = (1.0 if self._robot.gripper.get_open_amount()[0] > 0.9
-                          else 0.0)
+        # Discretize the gripper action
+        current_ee = (1.0 if self._robot.gripper.get_open_amount()[0] > 0.9
+                      else 0.0)
 
-            if ee_action > 0.5:
-                ee_action = 1.0
-            elif ee_action < 0.5:
-                ee_action = 0.0
-                
-        elif self._action_mode.gripper == GripperActionMode.OPEN_AMOUNT:
-            current_ee = self._robot.gripper.get_open_amount()[0]
-            ee_action = current_ee + (ee_action-0.5) * 2 * speed_grip
-
-
-
+        if ee_action > 0.5:
+            ee_action = 1.0
+        elif ee_action < 0.5:
+            ee_action = 0.0
 
         if self._action_mode.arm == ArmActionMode.ABS_JOINT_VELOCITY:
 
@@ -207,7 +194,6 @@ class TaskEnvironment(object):
                                       (len(self._robot.arm.joints),))
             self._robot.arm.set_joint_target_velocities(arm_action)
             self._scene.step()
-            
 
         elif self._action_mode.arm == ArmActionMode.DELTA_JOINT_VELOCITY:
 
@@ -298,10 +284,11 @@ class TaskEnvironment(object):
 
         if current_ee != ee_action:
             done = False
-            done = self._robot.gripper.actuate(ee_action, velocity=speed_grip)
-            self._pyrep.step()
-            self._task.step()
-            if done and ee_action == 0.0 and self._attach_grasped_objects:
+            while not done:
+                done = self._robot.gripper.actuate(ee_action, velocity=0.2)
+                self._pyrep.step()
+                self._task.step()
+            if ee_action == 0.0 and self._attach_grasped_objects:
                 # If gripper close action, the check for grasp.
                 for g_obj in self._task.get_graspable_objects():
                     self._robot.gripper.grasp(g_obj)
@@ -312,13 +299,6 @@ class TaskEnvironment(object):
         success, terminate = self._task.success()
         task_reward = self._task.reward()
         reward = float(success) if task_reward is None else task_reward
-        
-        # terminate if max episode length is reached
-        self._episode_length += 1
-        if self._episode_length == self._max_episode_length:
-            terminate = True
-            self._episode_length = 0
-             
         return self._scene.get_observation(), reward, terminate
 
     def enable_path_observations(self, value: bool) -> None:
