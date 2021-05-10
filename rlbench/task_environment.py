@@ -300,12 +300,12 @@ class TaskEnvironment(object):
         else:
             raise RuntimeError('Unrecognised action mode.')
 
-        if current_ee != ee_action:
-            done = False
-            done = self._robot.gripper.actuate(ee_action, velocity=speed_grip)
-            self._pyrep.step()
-            self._task.step()
-            if done and ee_action == 0.0 and self._attach_grasped_objects:
+        
+        done = self._robot.gripper.actuate(ee_action, velocity=speed_grip)
+        self._pyrep.step()
+        self._task.step()
+        if done:
+            if ee_action == 0.0 and self._attach_grasped_objects:
                 # If gripper close action, the check for grasp.
                 for g_obj in self._task.get_graspable_objects():
                     self._robot.gripper.grasp(g_obj)
