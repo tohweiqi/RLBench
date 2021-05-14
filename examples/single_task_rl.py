@@ -1,7 +1,7 @@
 from rlbench.environment import Environment
 from rlbench.action_modes import ArmActionMode, ActionMode
 from rlbench.observation_config import ObservationConfig
-from rlbench.tasks import ReachTarget
+from rlbench.tasks import ReachTarget, OpenBox
 import numpy as np
 
 
@@ -12,7 +12,7 @@ class Agent(object):
 
     def act(self, obs):
         arm = np.random.normal(0.0, 0.1, size=(self.action_size - 1,))
-        gripper = [1.0]  # Always open
+        gripper = [np.random.randint(2)]  # Discrete open or close
         return np.concatenate([arm, gripper], axis=-1)
 
 
@@ -26,23 +26,27 @@ env = Environment(
     action_mode, obs_config=obs_config, headless=False)
 env.launch()
 
-task = env.get_task(ReachTarget)
-
-agent = Agent(env.action_size)
-
 training_steps = 1200
 episode_length = 100
+
+task = env.get_task(OpenBox, max_episode_length = episode_length)
+#task = env.get_task(ReachTarget, max_episode_length = episode_length)
+
+agent = Agent(env.action_size)
+step_count = 0
+
 obs = None
+terminate = True
 for i in range(training_steps):
-    if i % episode_length == 0:
+    if terminate:
+        step_count = 0
         print('Reset Episode')
         descriptions, obs = task.reset()
         print(descriptions)
     action = agent.act(obs)
-    if i%10 == 0:
-        action[-1] = 0
     print(action)
     obs, reward, terminate = task.step(action)
-
+    step_count += 1
+    print(step_count)
 print('Done')
 env.shutdown()

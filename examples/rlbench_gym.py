@@ -1,7 +1,7 @@
 import gym
 import rlbench.gym
 
-env = gym.make('open_box-vision_front-v0', render_mode='rgb_array')
+env = gym.make('close_box-vision_front-v0', render_mode='rgb_array')
 
 training_steps = 120
 episode_length = 40

@@ -163,7 +163,7 @@ class Environment(object):
             self._pyrep.shutdown()
         self._pyrep = None
 
-    def get_task(self, task_class: Type[Task]) -> TaskEnvironment:
+    def get_task(self, task_class: Type[Task], max_episode_length: int = 200) -> TaskEnvironment:
 
         # If user hasn't called launch, implicitly call it.
         if self._pyrep is None:
@@ -175,7 +175,7 @@ class Environment(object):
         return TaskEnvironment(
             self._pyrep, self._robot, self._scene, task,
             self._action_mode, self._dataset_root, self._obs_config,
-            self._static_positions, self._attach_grasped_objects)
+            self._static_positions, self._attach_grasped_objects, max_episode_length)
 
     @property
     def action_size(self):
