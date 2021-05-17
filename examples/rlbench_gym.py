@@ -1,12 +1,14 @@
 import gym
 import rlbench.gym
 
-env = gym.make('close_box-vision_front-v0', render_mode='rgb_array')
-
 training_steps = 120
 episode_length = 40
+
+env = gym.make('close_box-vision_front-v0', render_mode='rgb_array', max_episode_length = episode_length)
+
+terminate = True
 for i in range(training_steps):
-    if i % episode_length == 0:
+    if terminate:
         print('Reset Episode')
         obs = env.reset()
     action = env.action_space.sample()

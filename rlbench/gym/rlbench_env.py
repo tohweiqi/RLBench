@@ -17,7 +17,7 @@ class RLBenchEnv(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array']}
 
     def __init__(self, task_class, observation_mode='state',
-                 render_mode: Union[None, str] = None):
+                 render_mode: Union[None, str] = None, max_episode_length: int = 200):
         self._observation_mode = observation_mode
         self._render_mode = render_mode
         obs_config = ObservationConfig()
@@ -68,7 +68,7 @@ class RLBenchEnv(gym.Env):
         self.env = Environment(
             action_mode, obs_config=obs_config, headless=True)
         self.env.launch()
-        self.task = self.env.get_task(task_class)
+        self.task = self.env.get_task(task_class, max_episode_length = max_episode_length)
 
         _, obs = self.task.reset()
 
