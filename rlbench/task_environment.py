@@ -4,7 +4,11 @@ from typing import List, Callable
 import numpy as np
 from pyquaternion import Quaternion
 from pyrep import PyRep
+<<<<<<< HEAD
 from pyrep.const import ObjectType
+=======
+from pyrep.const import ObjectType, ConfigurationPathAlgorithms
+>>>>>>> f214b6ecc177babce12d3ad13dd92049c824c1d9
 from pyrep.errors import IKError
 from pyrep.objects import Dummy
 
@@ -57,9 +61,14 @@ class TaskEnvironment(object):
 
         self._scene.load(self._task)
         self._pyrep.start()
-        
+        self._robot_shapes = self._robot.arm.get_objects_in_tree(
+            object_type=ObjectType.SHAPE)
+                    
         self._max_episode_length = max_episode_length
         self._episode_length = 0 
+        self._gripper_done = True
+        self._gripper_ee = 1.0
+
 
     def get_name(self) -> str:
         return self._task.get_name()
@@ -141,50 +150,19 @@ class TaskEnvironment(object):
             prev_values = cur_positions
             done = reached or not_moving
 
-    def _path_action(self, action, relative_to=None):
-        self._assert_unit_quaternion(action[3:])
-        # Check if the target is in the workspace; if not, then quick reject
-        # Only checks position, not rotation
-        pos_to_check = action[:3]
-        if relative_to is not None:
-            self._scene.target_workspace_check.set_position(
-                pos_to_check, relative_to)
-            pos_to_check = self._scene.target_workspace_check.get_position()
-        valid = self._scene.check_target_in_workspace(pos_to_check)
-        if not valid:
-            raise InvalidActionError('Target is outside of workspace.')
-
-        grasped_objects = self._robot.gripper.get_grasped_objects()
-        colliding_shapes = [s for s in self._pyrep.get_objects_in_tree(
-            object_type=ObjectType.SHAPE) if s not in grasped_objects
-                  and 'Panda' not in s.get_name() and s.is_collidable()
-                  and self._robot.arm.check_arm_collision(s)]
-        [s.set_collidable(False) for s in colliding_shapes]
+    def _path_action_get_path(self, action, collision_checking, relative_to):
         try:
             path = self._robot.arm.get_path(
-                action[:3], quaternion=action[3:], ignore_collisions=False,
-                relative_to=relative_to, trials=300, max_configs=50,
-                max_time_ms=20)
-            [s.set_collidable(True) for s in colliding_shapes]
-            done = False
-            observations = []
-            while not done:
-                done = path.step()
-                self._scene.step()
-                if self._enable_path_observations:
-                    observations.append(self._scene.get_observation())
-                success, terminate = self._task.success()
-                # If the task succeeds while traversing path, then break early
-                if success:
-                    break
-            return observations
+                action[:3], quaternion=action[3:],
+                ignore_collisions=not collision_checking,
+                relative_to=relative_to,
+              )
+            return path
         except IKError as e:
-            [s.set_collidable(True) for s in colliding_shapes]
             raise InvalidActionError('Could not find a path.') from e
 
-    def _path_action_v2(self, action, relative_to=None):
+    def _path_action(self, action, collision_checking=False, relative_to=None):
         self._assert_unit_quaternion(action[3:])
-
         # Check if the target is in the workspace; if not, then quick reject
         # Only checks position, not rotation
         pos_to_check = action[:3]
@@ -197,66 +175,40 @@ class TaskEnvironment(object):
             raise InvalidActionError('Target is outside of workspace.')
 
         observations = []
-        MAX_DELTA = 0.01
-        steps = np.ceil(np.linalg.norm(self._robot.arm.get_tip().get_pose()[:3] - action[:3]) / MAX_DELTA).astype(int)
-        path_poses = np.linspace(self._robot.arm.get_tip().get_pose(), action, steps)
-        calculated_joint_positions = []
-        initial_joint_positions = self._robot.arm.get_joint_positions()
-
-        grasped_objects = self._robot.gripper.get_grasped_objects()
-        colliding_shapes = [s for s in self._pyrep.get_objects_in_tree(
-            object_type=ObjectType.SHAPE) if s not in grasped_objects
-                  and 'Panda' not in s.get_name() and s.is_collidable()
-                  and self._robot.arm.check_arm_collision(s)]
-        [s.set_collidable(False) for s in colliding_shapes]
-        try:
-            for p in path_poses[1:]:
-                joint_positions = self._robot.arm.solve_ik_via_jacobian(
-                    p[:3], quaternion=p[3:], relative_to=relative_to)
-                calculated_joint_positions.append(joint_positions)
-                self._robot.arm.set_joint_positions(joint_positions, disable_dynamics=False)
-                colliding = self._robot.arm.check_arm_collision()
-                if colliding:
-                    calculated_joint_positions = []
-                    break
-
-            self._robot.arm.set_joint_positions(initial_joint_positions)
-
-            # Move until reached target joint positions or until we stop moving
-            # (e.g. when we collide wth something)
-            if len(calculated_joint_positions) > 0:
-                for ii, jp in enumerate(calculated_joint_positions):
-                    self._robot.arm.set_joint_target_positions(jp)
-                    done = False
-                    prev_values = None
-                    while not done:
-                        self._scene.step()
-                        if self._enable_path_observations:
-                            observations.append(self._scene.get_observation())
-                        cur_positions = self._robot.arm.get_joint_positions()
-                        # reached = np.allclose(cur_positions, jp, atol=0.01)
-                        atol = 1.0 if ii == len(jp) - 1 else 0.01
-                        reached = np.allclose(cur_positions, jp, atol=atol)
-                        not_moving = False
-                        if prev_values is not None:
-                            not_moving = np.allclose(
-                                cur_positions, prev_values, atol=0.001)
-                        prev_values = cur_positions
-                        done = reached or not_moving
-
+        done = False
+        if collision_checking:
+            # First check if we are colliding with anything
+            colliding = self._robot.arm.check_arm_collision()
+            if colliding:
+                # Disable collisions with the objects that we are colliding with
+                grasped_objects = self._robot.gripper.get_grasped_objects()
+                colliding_shapes = [s for s in self._pyrep.get_objects_in_tree(
+                    object_type=ObjectType.SHAPE) if (
+                        s.is_collidable() and
+                        s not in self._robot_shapes and
+                        s not in grasped_objects and
+                        self._robot.arm.check_arm_collision(s))]
+                [s.set_collidable(False) for s in colliding_shapes]
+                path = self._path_action_get_path(
+                    action, collision_checking, relative_to)
                 [s.set_collidable(True) for s in colliding_shapes]
-                return observations
-        except IKError as e:
-            self._robot.arm.set_joint_positions(initial_joint_positions)
-
-        observations = []
-        try:
-            path = self._robot.arm.get_path(
-                action[:3], quaternion=action[3:], ignore_collisions=False,
-                relative_to=relative_to, trials=300, max_configs=50,
-                max_time_ms=20)
-            [s.set_collidable(True) for s in colliding_shapes]
-            done = False
+                # Only run this path until we are no longer colliding
+                while not done:
+                    done = path.step()
+                    self._scene.step()
+                    if self._enable_path_observations:
+                        observations.append(self._scene.get_observation())
+                    colliding = self._robot.arm.check_arm_collision()
+                    if not colliding:
+                        break
+                    success, terminate = self._task.success()
+                    # If the task succeeds while traversing path, then break early
+                    if success:
+                        done = True
+                        break
+        if not done:
+            path = self._path_action_get_path(
+                action, collision_checking, relative_to)
             while not done:
                 done = path.step()
                 self._scene.step()
@@ -266,10 +218,9 @@ class TaskEnvironment(object):
                 # If the task succeeds while traversing path, then break early
                 if success:
                     break
-            return observations
-        except IKError as e:
-            [s.set_collidable(True) for s in colliding_shapes]
-            raise InvalidActionError('Could not find a path.') from e
+
+
+        return observations
 
     def step(self, action) -> (Observation, int, bool):
         # returns observation, reward, done, info
@@ -284,21 +235,11 @@ class TaskEnvironment(object):
         if 0.0 > ee_action > 1.0:
             raise ValueError('Gripper action expected to be within 0 and 1.')
 
-        if self._action_mode.gripper == GripperActionMode.DISCRETE_OPEN_CLOSE:
-            # Discretize the gripper action
-            current_ee = (1.0 if self._robot.gripper.get_open_amount()[0] > 0.9
-                          else 0.0)
-
-            if ee_action > 0.5:
-                ee_action = 1.0
-            elif ee_action < 0.5:
-                ee_action = 0.0
-                
-        elif self._action_mode.gripper == GripperActionMode.OPEN_AMOUNT:
-            current_ee = self._robot.gripper.get_open_amount()[0]
-            ee_action = current_ee + (ee_action-0.5) * 2 * speed_grip
-
-
+        # Discretize the gripper action
+        if ee_action > 0.5:
+            ee_action = 1.0
+        elif ee_action < 0.5:
+            ee_action = 0.0
 
 
         if self._action_mode.arm == ArmActionMode.ABS_JOINT_VELOCITY:
@@ -307,8 +248,9 @@ class TaskEnvironment(object):
                                       (len(self._robot.arm.joints),))
             self._robot.arm.set_joint_target_velocities(arm_action)
             self._scene.step()
-            
-
+            self._robot.arm.set_joint_target_velocities(
+                np.zeros_like(arm_action))
+                
         elif self._action_mode.arm == ArmActionMode.DELTA_JOINT_VELOCITY:
 
             self._assert_action_space(arm_action,
@@ -316,6 +258,8 @@ class TaskEnvironment(object):
             cur = np.array(self._robot.arm.get_joint_velocities())
             self._robot.arm.set_joint_target_velocities(cur + arm_action)
             self._scene.step()
+            self._robot.arm.set_joint_target_velocities(
+                np.zeros_like(arm_action))
 
         elif self._action_mode.arm == ArmActionMode.ABS_JOINT_POSITION:
 
@@ -323,6 +267,8 @@ class TaskEnvironment(object):
                                       (len(self._robot.arm.joints),))
             self._robot.arm.set_joint_target_positions(arm_action)
             self._scene.step()
+            self._robot.arm.set_joint_target_positions(
+                self._robot.arm.get_joint_positions())
 
         elif self._action_mode.arm == ArmActionMode.DELTA_JOINT_POSITION:
 
@@ -331,6 +277,8 @@ class TaskEnvironment(object):
             cur = np.array(self._robot.arm.get_joint_positions())
             self._robot.arm.set_joint_target_positions(cur + arm_action)
             self._scene.step()
+            self._robot.arm.set_joint_target_positions(
+                self._robot.arm.get_joint_positions())
 
         elif self._action_mode.arm == ArmActionMode.ABS_JOINT_TORQUE:
 
@@ -338,6 +286,9 @@ class TaskEnvironment(object):
                 arm_action, (len(self._robot.arm.joints),))
             self._torque_action(arm_action)
             self._scene.step()
+            self._torque_action(self._robot.arm.get_joint_forces())
+            self._robot.arm.set_joint_target_velocities(
+                np.zeros_like(arm_action))
 
         elif self._action_mode.arm == ArmActionMode.DELTA_JOINT_TORQUE:
 
@@ -345,6 +296,9 @@ class TaskEnvironment(object):
             new_action = cur + arm_action
             self._torque_action(new_action)
             self._scene.step()
+            self._torque_action(self._robot.arm.get_joint_forces())
+            self._robot.arm.set_joint_target_velocities(
+                np.zeros_like(arm_action))
 
         elif self._action_mode.arm == ArmActionMode.ABS_EE_POSE_WORLD_FRAME:
 
@@ -355,7 +309,15 @@ class TaskEnvironment(object):
 
             self._assert_action_space(arm_action, (7,))
             self._path_observations = []
-            self._path_observations = self._path_action(list(arm_action))
+            self._path_observations = self._path_action(
+                list(arm_action), collision_checking=False)
+
+        elif self._action_mode.arm == ArmActionMode.ABS_EE_POSE_PLAN_WORLD_FRAME_WITH_COLLISION_CHECK:
+
+            self._assert_action_space(arm_action, (7,))
+            self._path_observations = []
+            self._path_observations = self._path_action(
+                list(arm_action), collision_checking=True)
 
         elif self._action_mode.arm == ArmActionMode.ABS_EE_POSE_PLAN_WORLD_FRAME_V2:
 
@@ -402,18 +364,27 @@ class TaskEnvironment(object):
         else:
             raise RuntimeError('Unrecognised action mode.')
 
-        
-        done = self._robot.gripper.actuate(ee_action, velocity=speed_grip)
-        self._pyrep.step()
-        self._task.step()
-        if done:
-            if ee_action == 0.0 and self._attach_grasped_objects:
-                # If gripper close action, the check for grasp.
-                for g_obj in self._task.get_graspable_objects():
-                    self._robot.gripper.grasp(g_obj)
-            else:
-                # If gripper open action, the check for ungrasp.
-                self._robot.gripper.release()
+        # check for new action after prev gripper actuation is done
+        if self._gripper_ee != ee_action and self._gripper_done:
+            self._gripper_done = False
+            self._gripper_ee = ee_action
+            
+        # actuate gripper if not done
+        if not self._gripper_done:
+            self._gripper_done = self._robot.gripper.actuate(ee_action, velocity=0.2)
+            self._pyrep.step()
+            self._task.step()
+            
+            # check for grasp and ungrasp after done
+            if self._gripper_done:
+                if self._gripper_ee == 0.0 and self._attach_grasped_objects:
+                    # If gripper close action, the check for grasp.
+                    for g_obj in self._task.get_graspable_objects():
+                        self._robot.gripper.grasp(g_obj)
+                else:
+                    # If gripper open action, the check for ungrasp.
+                    self._robot.gripper.release()
+            
 
         success, terminate = self._task.success()
         task_reward = self._task.reward()
@@ -430,7 +401,7 @@ class TaskEnvironment(object):
     def enable_path_observations(self, value: bool) -> None:
         if (self._action_mode.arm != ArmActionMode.DELTA_EE_POSE_PLAN_WORLD_FRAME and
                 self._action_mode.arm != ArmActionMode.ABS_EE_POSE_PLAN_WORLD_FRAME and
-                self._action_mode.arm != ArmActionMode.ABS_EE_POSE_PLAN_WORLD_FRAME_V2 and
+                self._action_mode.arm != ArmActionMode.ABS_EE_POSE_PLAN_WORLD_FRAME_WITH_COLLISION_CHECK and
                 self._action_mode.arm != ArmActionMode.EE_POSE_PLAN_EE_FRAME):
             raise RuntimeError('Only available in DELTA_EE_POSE_PLAN or '
                                'ABS_EE_POSE_PLAN action mode.')
@@ -439,7 +410,7 @@ class TaskEnvironment(object):
     def get_path_observations(self):
         if (self._action_mode.arm != ArmActionMode.DELTA_EE_POSE_PLAN_WORLD_FRAME and
                 self._action_mode.arm != ArmActionMode.ABS_EE_POSE_PLAN_WORLD_FRAME and
-                self._action_mode.arm != ArmActionMode.ABS_EE_POSE_PLAN_WORLD_FRAME_V2 and
+                self._action_mode.arm != ArmActionMode.ABS_EE_POSE_PLAN_WORLD_FRAME_WITH_COLLISION_CHECK and
                 self._action_mode.arm != ArmActionMode.EE_POSE_PLAN_EE_FRAME):
             raise RuntimeError('Only available in DELTA_EE_POSE_PLAN or '
                                'ABS_EE_POSE_PLAN action mode.')
