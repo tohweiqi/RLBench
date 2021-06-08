@@ -23,7 +23,7 @@ _DT = 0.05
 _MAX_RESET_ATTEMPTS = 40
 _MAX_DEMO_ATTEMPTS = 10
 
-speed_grip = 0.2
+_speed_grip = 0.2
 
 class InvalidActionError(Exception):
     pass
@@ -367,7 +367,7 @@ class TaskEnvironment(object):
             
         # actuate gripper if not done
         if not self._gripper_done:
-            self._gripper_done = self._robot.gripper.actuate(ee_action, velocity=0.2)
+            self._gripper_done = self._robot.gripper.actuate(ee_action, velocity=_speed_grip)
             self._pyrep.step()
             self._task.step()
             
