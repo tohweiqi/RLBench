@@ -1,10 +1,10 @@
 import gym
 import rlbench.gym
 
-training_steps = 120
-episode_length = 40
+training_steps = 1000
+episode_length = 200
 
-env = gym.make('open_box-vision_front-v0', render_mode='human', max_episode_length = episode_length)
+env = gym.make('pick_up_cup-vision_front-v0', render_mode='human', max_episode_length = episode_length)
 
 terminate = True
 for i in range(training_steps):
