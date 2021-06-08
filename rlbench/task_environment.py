@@ -4,11 +4,7 @@ from typing import List, Callable
 import numpy as np
 from pyquaternion import Quaternion
 from pyrep import PyRep
-<<<<<<< HEAD
-from pyrep.const import ObjectType
-=======
 from pyrep.const import ObjectType, ConfigurationPathAlgorithms
->>>>>>> f214b6ecc177babce12d3ad13dd92049c824c1d9
 from pyrep.errors import IKError
 from pyrep.objects import Dummy
 
