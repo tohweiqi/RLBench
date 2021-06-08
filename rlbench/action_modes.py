@@ -50,23 +50,17 @@ class ArmActionMode(Enum):
 
     # NOTE: There is no ABS/DELTA mode for the EE_FRAME because ABS == DELTA
 
-    # Absolute end-effector pose (position (3) and quaternion (4))
-    # But does path planning between these points
-    # TODO: Experimental
-    ABS_EE_POSE_PLAN_WORLD_FRAME_V2 = 12
-
 
 class GripperActionMode(Enum):
 
     # The open amount (0 >= x <= 1) of the gripper. 0 is close, 1 is open.
     OPEN_AMOUNT = 0
-    
 
 
 class ActionMode(object):
 
     def __init__(self,
                  arm: ArmActionMode = ArmActionMode.ABS_JOINT_VELOCITY,
-                 gripper: GripperActionMode = GripperActionMode.DISCRETE_OPEN_CLOSE):
+                 gripper: GripperActionMode = GripperActionMode.OPEN_AMOUNT):
         self.arm = arm
         self.gripper = gripper
