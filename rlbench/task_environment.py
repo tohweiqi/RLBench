@@ -23,7 +23,7 @@ _DT = 0.05
 _MAX_RESET_ATTEMPTS = 40
 _MAX_DEMO_ATTEMPTS = 10
 
-_speed_grip = 0.2
+
 
 class InvalidActionError(Exception):
     pass
@@ -40,6 +40,7 @@ class TaskEnvironment(object):
                  obs_config: ObservationConfig,
                  static_positions: bool = False,
                  attach_grasped_objects: bool = True,
+                 gripper_speed: float = 0.2,
                  max_episode_length: int = 200):
         self._pyrep = pyrep
         self._robot = robot
@@ -61,7 +62,9 @@ class TaskEnvironment(object):
             object_type=ObjectType.SHAPE)
                     
         self._max_episode_length = max_episode_length
-        self._episode_length = 0 
+        self._speed_grip = gripper_speed
+        
+        self._episode_length = 0         
         self._gripper_done = True
         self._gripper_ee = 1.0
 
@@ -367,7 +370,7 @@ class TaskEnvironment(object):
             
         # actuate gripper if not done
         if not self._gripper_done:
-            self._gripper_done = self._robot.gripper.actuate(self._gripper_ee, velocity=_speed_grip)
+            self._gripper_done = self._robot.gripper.actuate(self._gripper_ee, velocity=self._speed_grip)
             self._pyrep.step()
             self._task.step()
             
