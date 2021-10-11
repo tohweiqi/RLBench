@@ -41,7 +41,8 @@ class TaskEnvironment(object):
                  static_positions: bool = False,
                  attach_grasped_objects: bool = True,
                  gripper_speed: float = 0.2,
-                 max_episode_length: int = 200):
+                 max_episode_length: int = 200,
+                 dense_rewards: bool = False):
         self._pyrep = pyrep
         self._robot = robot
         self._scene = scene
@@ -63,10 +64,12 @@ class TaskEnvironment(object):
                     
         self._max_episode_length = max_episode_length
         self._speed_grip = gripper_speed
+        self.dense_rewards = dense_rewards 
         
         self._episode_length = 0         
         self._gripper_done = True
-        self._gripper_ee = 1.0
+        open_condition = all(x > 0.9 for x in self._robot.gripper.get_open_amount())
+        self._gripper_ee = 1.0 if open_condition else 0.0
 
 
     def get_name(self) -> str:
@@ -228,6 +231,8 @@ class TaskEnvironment(object):
                 "Call 'reset' before calling 'step' on a task.")
 
         # action should contain 1 extra value for gripper open close state
+        # Arm action: updated at every step
+        # Gripper action: blocking, will fully open/close before next gripper action can be called
         arm_action = np.array(action[:-1])
         ee_action = action[-1]
 
@@ -386,7 +391,7 @@ class TaskEnvironment(object):
             
 
         success, terminate = self._task.success()
-        task_reward = self._task.reward()
+        task_reward = self._task.reward(dense=self.dense_rewards)
         reward = float(success) if task_reward is None else task_reward
         
         # terminate if max episode length is reached

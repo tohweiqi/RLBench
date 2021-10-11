@@ -43,6 +43,14 @@ for task_file in TASKS:
         }
     )
     register(
+        id='%s-vision_overhead-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_overhead'
+        }
+    )
+    register(
         id='%s-vision_left_shoulder-v0' % task_name,
         entry_point='rlbench.gym:RLBenchEnv',
         kwargs={
@@ -59,42 +67,99 @@ for task_file in TASKS:
         }
     )
     register(
-        id='%s-vision_only-v0' % task_name,
+        id='%s-vision_rgb-v0' % task_name,
         entry_point='rlbench.gym:RLBenchEnv',
         kwargs={
             'task_class': task_class,
-            'observation_mode': 'vision_only'
+            'observation_mode': 'vision_rgb'
         }
     )
     register(
-        id='%s-vision_wrist_only-v0' % task_name,
+        id='%s-vision_wrist_rgb-v0' % task_name,
         entry_point='rlbench.gym:RLBenchEnv',
         kwargs={
             'task_class': task_class,
-            'observation_mode': 'vision_wrist_only'
+            'observation_mode': 'vision_wrist_rgb'
         }
     )
     register(
-        id='%s-vision_front_only-v0' % task_name,
+        id='%s-vision_front_rgb-v0' % task_name,
         entry_point='rlbench.gym:RLBenchEnv',
         kwargs={
             'task_class': task_class,
-            'observation_mode': 'vision_front_only'
+            'observation_mode': 'vision_front_rgb'
         }
     )
     register(
-        id='%s-vision_left_shoulder_only-v0' % task_name,
+        id='%s-vision_overhead_rgb-v0' % task_name,
         entry_point='rlbench.gym:RLBenchEnv',
         kwargs={
             'task_class': task_class,
-            'observation_mode': 'vision_left_shoulder_only'
+            'observation_mode': 'vision_overhead_rgb'
         }
     )
     register(
-        id='%s-vision_right_shoulder_only-v0' % task_name,
+        id='%s-vision_left_shoulder_rgb-v0' % task_name,
         entry_point='rlbench.gym:RLBenchEnv',
         kwargs={
             'task_class': task_class,
-            'observation_mode': 'vision_right_shoulder_only'
+            'observation_mode': 'vision_left_shoulder_rgb'
+        }
+    )
+    register(
+        id='%s-vision_right_shoulder_rgb-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_right_shoulder_rgb'
+        }
+    )
+    
+    register(
+        id='%s-vision_rgbd-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_rgbd'
+        }
+    )
+    register(
+        id='%s-vision_wrist_rgbd-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_wrist_rgbd'
+        }
+    )
+    register(
+        id='%s-vision_front_rgbd-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_front_rgbd'
+        }
+    )
+    register(
+        id='%s-vision_overhead_rgbd-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_overhead_rgbd'
+        }
+    )
+    register(
+        id='%s-vision_left_shoulder_rgbd-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_left_shoulder_rgbd'
+        }
+    )
+    register(
+        id='%s-vision_right_shoulder_rgbd-v0' % task_name,
+        entry_point='rlbench.gym:RLBenchEnv',
+        kwargs={
+            'task_class': task_class,
+            'observation_mode': 'vision_right_shoulder_rgbd'
         }
     )

@@ -106,3 +106,9 @@ class ObservationConfig(object):
         self.gripper_touch_forces = value
         self.wrist_camera_matrix = value
         self.task_low_dim_state = value
+        
+    def set_custom_low_dim(self, value: bool):
+        self.joint_positions = value
+        self.gripper_pose = value
+        self.wrist_camera_matrix = value
+        self.task_low_dim_state = value
