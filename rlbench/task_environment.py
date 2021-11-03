@@ -42,7 +42,7 @@ class TaskEnvironment(object):
                  attach_grasped_objects: bool = True,
                  gripper_speed: float = 0.2,
                  max_episode_length: int = 200,
-                 dense_rewards: bool = False):
+                 dense_rewards: int = 0):
         self._pyrep = pyrep
         self._robot = robot
         self._scene = scene
@@ -64,7 +64,7 @@ class TaskEnvironment(object):
                     
         self._max_episode_length = max_episode_length
         self._speed_grip = gripper_speed
-        self.dense_rewards = dense_rewards 
+        self._dense_rewards = dense_rewards 
         
         self._episode_length = 0         
         self._gripper_done = True
@@ -391,8 +391,11 @@ class TaskEnvironment(object):
             
 
         success, terminate = self._task.success()
-        task_reward = self._task.reward(dense=self.dense_rewards)
-        reward = float(success) if task_reward is None else task_reward
+        if success:
+            reward = 1
+        else:
+            task_reward = self._task.reward(dense=self._dense_rewards)
+            reward = 0 if task_reward is None else task_reward
         
         # terminate if max episode length is reached
         self._episode_length += 1
