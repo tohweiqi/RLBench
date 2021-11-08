@@ -391,11 +391,8 @@ class TaskEnvironment(object):
             
 
         success, terminate = self._task.success()
-        if success:
-            reward = 1
-        else:
-            task_reward = self._task.reward(dense=self._dense_rewards)
-            reward = 0 if task_reward is None else task_reward
+        task_reward = self._task.reward(dense=self._dense_rewards)
+        reward = 0 if task_reward is None else task_reward
         
         # terminate if max episode length is reached
         self._episode_length += 1

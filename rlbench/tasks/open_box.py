@@ -38,7 +38,11 @@ class OpenBox(Task):
             return None
         else:
             #obj = self.robot.get_grasped_objects() 
-             
+            
+            success, terminate = self.success()
+            if success:
+                return 10
+
             robot_tip = self.robot.arm.get_tip()
             tip_pose = robot_tip.get_pose()
 
@@ -56,16 +60,14 @@ class OpenBox(Task):
                 wp_pose = self.waypoints[1].get_pose()
                 grip_desired = 0
 
-            # open lid
+            # opening lid
             elif self.stage == 2:
-                success, terminate = self.success()
-                if success:
-                    return 1
-                elif dense == 1:
+                if dense == 1:
                     return 0
-                else:
-                    wp_pose = self.waypoints[3].get_pose()
-                    grip_desired = 0
+                wp_pose = self.waypoints[3].get_pose()
+                grip_desired = 0
+            else:
+                return 0
             
 
             dist = [(a - b)**2 for a, b in zip(wp_pose, tip_pose)]
